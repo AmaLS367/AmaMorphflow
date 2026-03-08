@@ -5,7 +5,7 @@ import shutil
 import sys
 from pathlib import Path
 
-import imageio.v2 as imageio
+import cv2
 import numpy as np
 import torch
 import torchvision
@@ -71,14 +71,23 @@ def save_videos_from_pil(pil_images, path, fps=8):
             container.mux(stream.encode())
             container.close()
         else:
-            with imageio.get_writer(
+            width, height = pil_images[0].size
+            writer = cv2.VideoWriter(
                 path,
-                fps=fps,
-                codec="libx264",
-                macro_block_size=None,
-            ) as writer:
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                float(fps) if fps else 8.0,
+                (width, height),
+            )
+            if not writer.isOpened():
+                raise RuntimeError(f"Unable to open video writer for {path}")
+            try:
                 for pil_image in pil_images:
-                    writer.append_data(np.asarray(pil_image.convert("RGB")))
+                    frame = cv2.cvtColor(
+                        np.asarray(pil_image.convert("RGB")), cv2.COLOR_RGB2BGR
+                    )
+                    writer.write(frame)
+            finally:
+                writer.release()
 
     elif save_fmt == ".gif":
         pil_images[0].save(
@@ -129,8 +138,22 @@ def read_frames(video_path):
         container.close()
         return frames
 
-    with imageio.get_reader(video_path) as reader:
-        return [Image.fromarray(frame).convert("RGB") for frame in reader]
+    capture = cv2.VideoCapture(video_path)
+    if not capture.isOpened():
+        raise RuntimeError(f"Unable to open video file {video_path}")
+
+    frames = []
+    try:
+        while True:
+            success, frame = capture.read()
+            if not success:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(Image.fromarray(frame).convert("RGB"))
+    finally:
+        capture.release()
+
+    return frames
 
 
 def get_fps(video_path):
@@ -141,5 +164,11 @@ def get_fps(video_path):
         container.close()
         return fps
 
-    with imageio.get_reader(video_path) as reader:
-        return reader.get_meta_data().get("fps", 0)
+    capture = cv2.VideoCapture(video_path)
+    if not capture.isOpened():
+        raise RuntimeError(f"Unable to open video file {video_path}")
+    try:
+        fps = capture.get(cv2.CAP_PROP_FPS)
+    finally:
+        capture.release()
+    return fps or 0
