@@ -47,11 +47,13 @@ class AnimateController:
         if self.pipeline is None:
             vae = AutoencoderKL.from_pretrained(
                 self.config.pretrained_vae_path,
+                low_cpu_mem_usage=False,
             ).to("cuda", dtype=self.weight_dtype)
 
             reference_unet = UNet2DConditionModel.from_pretrained(
                 self.config.pretrained_base_model_path,
                 subfolder="unet",
+                low_cpu_mem_usage=False,
             ).to(dtype=self.weight_dtype, device="cuda")
 
             inference_config_path = self.config.inference_config
@@ -68,7 +70,8 @@ class AnimateController:
             )
 
             image_enc = CLIPVisionModelWithProjection.from_pretrained(
-                self.config.image_encoder_path
+                self.config.image_encoder_path,
+                low_cpu_mem_usage=False,
             ).to(dtype=self.weight_dtype, device="cuda")
             sched_kwargs = OmegaConf.to_container(infer_config.noise_scheduler_kwargs)
             scheduler = DDIMScheduler(**sched_kwargs)
