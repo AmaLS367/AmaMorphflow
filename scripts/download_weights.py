@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -43,8 +44,8 @@ DOWNLOADS = [
         "image_encoder/pytorch_model.bin",
     ),
     (
-        "camenduru/AnimateAnyone",
-        "resolve/main/sd-vae-ft-mse/config.json",
+        "stabilityai/sd-vae-ft-mse",
+        "raw/main/config.json",
         "sd-vae-ft-mse/config.json",
     ),
     (
@@ -142,13 +143,16 @@ def _print_progress(name: str, downloaded: int, total: int | None) -> None:
 
 def _download_file(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = destination.with_suffix(destination.suffix + ".part")
+    if temporary_path.exists():
+        temporary_path.unlink()
 
     with requests.get(url, stream=True, timeout=60) as response:
         response.raise_for_status()
         total = int(response.headers.get("content-length", "0")) or None
         downloaded = 0
 
-        with destination.open("wb") as output:
+        with temporary_path.open("wb") as output:
             for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                 if not chunk:
                     continue
@@ -156,21 +160,38 @@ def _download_file(url: str, destination: Path) -> None:
                 downloaded += len(chunk)
                 _print_progress(destination.name, downloaded, total)
 
+    if total is not None and downloaded != total:
+        if temporary_path.exists():
+            temporary_path.unlink()
+        raise RuntimeError(
+            f"incomplete download: got {_format_size(downloaded)} of {_format_size(total)}"
+        )
+
+    temporary_path.replace(destination)
     print()
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="re-download files even if they already exist",
+    )
+    args = parser.parse_args()
+
     repo_root = Path(__file__).resolve().parents[1]
     target_root = repo_root / "pretrained_weights"
     failed: list[tuple[str, str]] = []
 
     for repo_id, remote_path, local_path in DOWNLOADS:
         destination = target_root / local_path
-        if destination.exists() and destination.stat().st_size > 0:
+        if not args.force and destination.exists() and destination.stat().st_size > 0:
             print(f"[skip] {local_path}")
             continue
         if destination.exists():
             print(f"[retry] {local_path} exists but is empty")
+            destination.unlink()
 
         url = f"https://huggingface.co/{repo_id}/{remote_path}"
         print(f"[download] {local_path}")
