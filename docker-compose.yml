@@ -1,0 +1,21 @@
+services:
+  verify:
+    build:
+      context: .
+    image: amamorphflow:py312
+    volumes:
+      - ./pretrained_weights:/app/pretrained_weights
+      - ./output:/app/output
+    command: >
+      sh -lc "download-weights && verify-weights"
+
+  app:
+    build:
+      context: .
+    image: amamorphflow:py312
+    profiles: ["gpu"]
+    gpus: all
+    volumes:
+      - ./pretrained_weights:/app/pretrained_weights
+      - ./output:/app/output
+    command: python app.py
