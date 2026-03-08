@@ -275,4 +275,4 @@ def ui():
 
 
 demo = ui()
-demo.launch(share=True)
+demo.queue().launch(share=True, show_error=True)
