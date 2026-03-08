@@ -8,12 +8,24 @@ import numpy as np
 import torch
 import torchvision
 from diffusers import AutoencoderKL, DDIMScheduler
+from diffusers import utils as diffusers_utils
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipeline
 from einops import repeat
 from omegaconf import OmegaConf
 from PIL import Image
 from torchvision import transforms
 from transformers import CLIPVisionModelWithProjection
+
+try:
+    from peft import PeftModel  # noqa: F401
+except Exception:
+    diffusers_utils.USE_PEFT_BACKEND = False
+    try:
+        from diffusers.utils import import_utils as diffusers_import_utils
+
+        diffusers_import_utils._peft_available = False
+    except Exception:
+        pass
 
 from configs.prompts.test_cases import TestCasesDict
 from src.models.pose_guider import PoseGuider

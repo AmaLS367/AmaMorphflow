@@ -12,6 +12,7 @@ import torch
 # 初始化模型
 import torchvision
 from diffusers import AutoencoderKL, DDIMScheduler
+from diffusers import utils as diffusers_utils
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipeline
 from einops import rearrange, repeat
 from omegaconf import OmegaConf
@@ -24,6 +25,17 @@ from transformers import (
     CLIPVisionModel,
     CLIPVisionModelWithProjection,
 )
+
+try:
+    from peft import PeftModel  # noqa: F401
+except Exception:
+    diffusers_utils.USE_PEFT_BACKEND = False
+    try:
+        from diffusers.utils import import_utils as diffusers_import_utils
+
+        diffusers_import_utils._peft_available = False
+    except Exception:
+        pass
 
 import sys
 from src.models.unet_3d import UNet3DConditionModel
