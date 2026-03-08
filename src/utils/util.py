@@ -5,12 +5,17 @@ import shutil
 import sys
 from pathlib import Path
 
-import av
+import imageio.v2 as imageio
 import numpy as np
 import torch
 import torchvision
 from einops import rearrange
 from PIL import Image
+
+try:
+    import av
+except ImportError:
+    av = None
 
 
 def seed_everything(seed):
@@ -49,26 +54,31 @@ def delete_additional_ckpt(base_path, num_keep):
 
 
 def save_videos_from_pil(pil_images, path, fps=8):
-    import av
-
     save_fmt = Path(path).suffix
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    width, height = pil_images[0].size
 
     if save_fmt == ".mp4":
-        codec = "libx264"
-        container = av.open(path, "w")
-        stream = container.add_stream(codec, rate=fps)
+        if av is not None:
+            width, height = pil_images[0].size
+            container = av.open(path, "w")
+            stream = container.add_stream("libx264", rate=fps)
+            stream.width = width
+            stream.height = height
 
-        stream.width = width
-        stream.height = height
-
-        for pil_image in pil_images:
-            # pil_image = Image.fromarray(image_arr).convert("RGB")
-            av_frame = av.VideoFrame.from_image(pil_image)
-            container.mux(stream.encode(av_frame))
-        container.mux(stream.encode())
-        container.close()
+            for pil_image in pil_images:
+                av_frame = av.VideoFrame.from_image(pil_image)
+                container.mux(stream.encode(av_frame))
+            container.mux(stream.encode())
+            container.close()
+        else:
+            with imageio.get_writer(
+                path,
+                fps=fps,
+                codec="libx264",
+                macro_block_size=None,
+            ) as writer:
+                for pil_image in pil_images:
+                    writer.append_data(np.asarray(pil_image.convert("RGB")))
 
     elif save_fmt == ".gif":
         pil_images[0].save(
@@ -104,25 +114,32 @@ def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, f
 
 
 def read_frames(video_path):
-    container = av.open(video_path)
+    if av is not None:
+        container = av.open(video_path)
+        video_stream = next(s for s in container.streams if s.type == "video")
+        frames = []
+        for packet in container.demux(video_stream):
+            for frame in packet.decode():
+                image = Image.frombytes(
+                    "RGB",
+                    (frame.width, frame.height),
+                    frame.to_rgb().to_ndarray(),
+                )
+                frames.append(image)
+        container.close()
+        return frames
 
-    video_stream = next(s for s in container.streams if s.type == "video")
-    frames = []
-    for packet in container.demux(video_stream):
-        for frame in packet.decode():
-            image = Image.frombytes(
-                "RGB",
-                (frame.width, frame.height),
-                frame.to_rgb().to_ndarray(),
-            )
-            frames.append(image)
-
-    return frames
+    with imageio.get_reader(video_path) as reader:
+        return [Image.fromarray(frame).convert("RGB") for frame in reader]
 
 
 def get_fps(video_path):
-    container = av.open(video_path)
-    video_stream = next(s for s in container.streams if s.type == "video")
-    fps = video_stream.average_rate
-    container.close()
-    return fps
+    if av is not None:
+        container = av.open(video_path)
+        video_stream = next(s for s in container.streams if s.type == "video")
+        fps = video_stream.average_rate
+        container.close()
+        return fps
+
+    with imageio.get_reader(video_path) as reader:
+        return reader.get_meta_data().get("fps", 0)

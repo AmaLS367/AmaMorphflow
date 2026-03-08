@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-import av
 import cv2
 import numpy as np
 import torch
