@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amamorphflow"
+version = "0.1.0"
+description = "AmaMorphflow fork of Moore-AnimateAnyone"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy==1.26.4",
+    "pillow>=8.0,<11.0",
+    "diffusers==0.24.0",
+    "transformers==4.38.2",
+    "tokenizers==0.15.2",
+    "huggingface_hub==0.21.4",
+    "accelerate==0.21.0",
+    "gradio==3.50.2",
+    "protobuf==4.25.3",
+    "opencv-python-headless==4.8.1.78",
+    "tensorboard==2.14.0",
+    "decord==0.6.0",
+    "einops==0.4.1",
+    "imageio==2.33.0",
+    "imageio-ffmpeg==0.4.9",
+    "omegaconf==2.2.3",
+    "torch>=2.0.0",
+    "torchvision",
+    "requests",
+]
+
+[project.scripts]
+download-weights = "scripts.download_weights:main"
+verify-weights = "scripts.verify_weights:main"
+
+[tool.setuptools.packages.find]
+include = ["src*", "scripts*"]
