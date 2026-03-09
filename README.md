@@ -1,4 +1,17 @@
 # 🤗 Introduction  
+**AmaMorphflow Fork**: This fork of [Moore-AnimateAnyone](https://github.com/MooreThreads/Moore-AnimateAnyone) is optimized for ease of deployment, specifically targeting **Google Colab** and cloud environments. It addresses numerous dependency conflicts and environment-related errors found in the original repository.
+
+### 🌟 Key Changes in this Fork
+- **Colab & Cloud Optimization**: Resolved strict dependency conflicts and environment issues that previously caused hours of troubleshooting.
+- **Modern Packaging**: Introduced `pyproject.toml` for standard Python packaging and a `Dockerfile` for seamless containerization.
+- **Python 3.12+ Support**: Updated base requirements to support modern Python environments (3.12+).
+- **Resilient Video IO**: Added OpenCV and imageio fallbacks to ensure stable video processing across different systems.
+- **Stability Enhancements**: Enabled Gradio queue for long-running inference tasks and optimized memory loading (disabled low CPU memory mode) to prevent crashes on systems with limited resources.
+- **Weight Management**: Integrated automated weight verification (`verify_weights.py`) and enhanced downloading scripts.
+- **Structural Cleanup**: Moved utility tools to `src/tools` to follow idiomatic Python package structures.
+
+---
+
 **update** 🔥🔥🔥 We propose a face reenactment method, based on our AnimateAnyone pipeline: Using the facial landmark of driving video to control the pose of given source image, and keeping the identity of source image. Specially, we disentangle head attitude (including eyes blink) and mouth motion from the landmark of driving video, and it can control the expression and movements of source face precisely. We release our inference codes and pretrained models of face reenactment!!
 
 
@@ -107,7 +120,7 @@ git clone https://github.com/emilianavt/OpenSeeFace.git
 **Automatically downloading**: You can run the following command to download weights automatically:
 
 ```shell
-python tools/download_weights.py
+python src/tools/download_weights.py
 ```
 
 Weights will be placed under the `./pretrained_weights` direcotry. The whole downloading process may take a long time.
@@ -173,7 +186,7 @@ python -m scripts.pose2vid --config ./configs/prompts/animation.yaml -W 512 -H 7
 You can refer the format of `animation.yaml` to add your own reference images or pose videos. To convert the raw video into a pose video (keypoint sequence), you can run with the following command:
 
 ```shell
-python tools/vid2pose.py --video_path /path/to/your/video.mp4
+python src/tools/vid2pose.py --video_path /path/to/your/video.mp4
 ```
 
 ## Inference of Face Reenactment
@@ -193,13 +206,13 @@ Note: package dependencies have been updated, you may upgrade your environment v
 Extract keypoints from raw videos: 
 
 ```shell
-python tools/extract_dwpose_from_vid.py --video_root /path/to/your/video_dir
+python src/tools/extract_dwpose_from_vid.py --video_root /path/to/your/video_dir
 ```
 
 Extract the meta info of dataset:
 
 ```shell
-python tools/extract_meta_info.py --root_path /path/to/your/video_dir --dataset_name anyone 
+python src/tools/extract_meta_info.py --root_path /path/to/your/video_dir --dataset_name anyone 
 ```
 
 Update lines in the training config file: 
